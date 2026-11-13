@@ -94,7 +94,8 @@ code { font: 12px var(--mono); background: var(--code); padding: 1px 5px; border
 button.pane-title:hover { background: var(--hover); }
 .tag { flex: none; font-size: 12px; color: var(--ink-3); border: 1px solid var(--line); border-radius: 99px; padding: 1px 9px; white-space: nowrap; }
 button.tag:hover { background: var(--hover); color: var(--ink-2); }
-.conv { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+/* A size container, so the rules below can react to the width of one conversation column. */
+.conv { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; container-type: inline-size; }
 .conv-col { max-width: 760px; margin: 0 auto; padding: 20px 24px 28px; display: flex; flex-direction: column; }
 .empty { max-width: 460px; margin: 12vh auto 0; padding: 0 24px; display: grid; gap: 10px; color: var(--ink-2); }
 .empty h2 { color: var(--ink); }
@@ -257,8 +258,9 @@ button.chip:hover { border-color: var(--line-2); background: var(--hover); }
 .thinking div { white-space: pre-wrap; border-left: 1px solid var(--line-2); padding: 2px 0 2px 12px; margin-top: 6px; }
 .raw { font: 12.5px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code); border-radius: var(--radius); padding: 12px 14px; margin: 0; }
 .compare { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; }
-/* Comparing samples needs room, so the conversation column widens while any message is in compare mode. */
-.conv-col:has(.compare) { max-width: 1320px; }
+/* Comparing samples needs room, so the one message in compare mode grows past the text column.
+   The other messages stay where they are. */
+.msg:has(.compare) { align-self: center; width: min(100cqw - 48px, 1320px); }
 .compare-col { flex: 1 0 220px; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 14px; display: grid; gap: 8px; align-content: start; }
 .compare-head { font-size: 12px; font-weight: 600; color: var(--ink-3); display: flex; gap: 8px; align-items: center; }
 .markdown { min-width: 0; overflow-wrap: anywhere; line-height: 1.65; }
@@ -277,6 +279,19 @@ button.chip:hover { border-color: var(--line-2); background: var(--hover); }
 .markdown th, .markdown td { border: 1px solid var(--line); padding: 5px 10px; text-align: left; }
 .markdown hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
 .inserter { height: 14px; margin-bottom: 10px; display: grid; place-items: center; position: relative; }
+/* With a mouse and enough width, the action row floats in the gap below its message instead of
+   taking a row of its own. The gap is then only the insert zone, with its line in the middle.
+   A hidden action row lets clicks through, so it can never be hit by accident. */
+@media (hover: hover) {
+  @container (min-width: 561px) {
+    .msg { position: relative; }
+    .msg-actions { position: absolute; top: 100%; left: 0; padding-top: 4px; z-index: 2; flex-wrap: nowrap; pointer-events: none; }
+    .msg.user .msg-actions { left: auto; right: 0; }
+    .msg:hover .msg-actions, .msg:focus-within .msg-actions { pointer-events: auto; }
+    .inserter { height: 40px; margin-bottom: 0; }
+  }
+}
+@media (hover: none) { .inserter-btn { opacity: 1; } }
 .inserter-btn {
   display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--ink-3); background: var(--bg); border: 1px solid var(--line-2);
   border-radius: 99px; padding: 0 9px; height: 20px; opacity: 0; transition: opacity 0.15s var(--ease); position: relative; z-index: 1;

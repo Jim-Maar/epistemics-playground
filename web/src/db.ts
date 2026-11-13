@@ -69,6 +69,8 @@ export type ScoreRec = Base & {
   error?: string;
   judgeRevision: number;
   retried?: boolean;
+  /** Set when the score was removed because its sample was replaced. Undo brings exactly these back. */
+  removedWithSample?: boolean;
 };
 
 export type OutboxRec = { key: string; table: SyncedTable; id: string; updatedAt: number };

@@ -220,14 +220,19 @@ async function applyEvent(runId: string, target: Target, event: RunEvent): Promi
 async function finishTarget(runId: string, target: Target, event: Extract<RunEvent, { type: "done" }>) {
   const stopped = stopRequested.delete(runId);
   if (target.table === "samples") {
-    await patchTarget(target, {
-      status: stopped ? "stopped" : "done", text: event.text, thinking: event.thinking || undefined,
-      model: event.model || undefined, error: undefined,
+    // One transaction: the answer and the queued scores of its judges appear together, so a judge
+    // chip never shows a finished answer without a score on the way.
+    const newScores = await tx(async () => {
+      await patchTarget(target, {
+        status: stopped ? "stopped" : "done", text: event.text, thinking: event.thinking || undefined,
+        model: event.model || undefined, error: undefined,
+      });
+      const sample = await db.samples.get(target.id);
+      if (!sample) return [];
+      await touchThreadActivity(sample.threadId);
+      return event.text.trim() ? createMissingScores(sample.messageId) : [];
     });
-    const sample = await db.samples.get(target.id);
-    if (!sample) return;
-    await touchThreadActivity(sample.threadId);
-    if (event.text.trim()) await ensureScores(sample.messageId);
+    startScores(newScores);
     return;
   }
   if (stopped || !event.judgement) {
@@ -276,33 +281,39 @@ export async function resumePendingRuns() {
  * (or for the text of a user message). Creates and starts the missing ones.
  */
 export async function ensureScores(messageId: string) {
-  const created = await tx(async () => {
-    const message = await db.messages.get(messageId);
-    if (!message || message.deleted) return [];
-    const attachments = live(await db.attachments.where("messageId").equals(messageId).toArray());
-    const targets = await scoreTargets(message);
-    const scores = live(await db.scores.where("threadId").equals(message.threadId).toArray());
-    const newScores: ScoreRec[] = [];
-    for (const attachment of attachments) {
-      const judge = await db.judges.get(attachment.judgeId);
-      if (!judge || judge.deleted) continue;
-      for (const targetId of targets) {
-        const exists = scores.some(
-          (s) => s.attachmentId === attachment.id && s.targetId === targetId && s.judgeRevision === judge.revision,
-        );
-        if (exists) continue;
-        const now = Date.now();
-        newScores.push(
-          await save<ScoreRec>("scores", {
-            id: uid(), attachmentId: attachment.id, judgeId: judge.id, threadId: message.threadId, targetId,
-            status: "queued", judgeRevision: judge.revision, createdAt: now, updatedAt: now,
-          }),
-        );
-      }
+  startScores(await tx(() => createMissingScores(messageId)));
+}
+
+function startScores(scores: ScoreRec[]) {
+  for (const score of scores) void startRun({ table: "scores", id: score.id });
+}
+
+/** Creates the queued score records that are missing for a message. Runs inside a transaction. */
+async function createMissingScores(messageId: string): Promise<ScoreRec[]> {
+  const message = await db.messages.get(messageId);
+  if (!message || message.deleted) return [];
+  const attachments = live(await db.attachments.where("messageId").equals(messageId).toArray());
+  const targets = await scoreTargets(message);
+  const scores = live(await db.scores.where("threadId").equals(message.threadId).toArray());
+  const newScores: ScoreRec[] = [];
+  for (const attachment of attachments) {
+    const judge = await db.judges.get(attachment.judgeId);
+    if (!judge || judge.deleted) continue;
+    for (const targetId of targets) {
+      const exists = scores.some(
+        (s) => s.attachmentId === attachment.id && s.targetId === targetId && s.judgeRevision === judge.revision,
+      );
+      if (exists) continue;
+      const now = Date.now();
+      newScores.push(
+        await save<ScoreRec>("scores", {
+          id: uid(), attachmentId: attachment.id, judgeId: judge.id, threadId: message.threadId, targetId,
+          status: "queued", judgeRevision: judge.revision, createdAt: now, updatedAt: now,
+        }),
+      );
     }
-    return newScores;
-  });
-  for (const score of created) void startRun({ table: "scores", id: score.id });
+  }
+  return newScores;
 }
 
 async function scoreTargets(message: MessageRec): Promise<string[]> {
