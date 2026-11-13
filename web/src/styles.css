@@ -218,14 +218,14 @@ button.tag:hover { background: var(--hover); color: var(--ink-2); }
 .msg.user.editing, .msg.assistant.editing { align-items: stretch; }
 .bubble { max-width: 82%; background: var(--bubble); border-radius: 18px; padding: 9px 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg-actions { display: flex; gap: 2px; align-items: center; min-height: 26px; opacity: 0; transition: opacity 0.15s var(--ease); flex-wrap: wrap; }
-.msg:hover .msg-actions, .msg:focus-within .msg-actions { opacity: 1; }
+.msg:hover .msg-actions, .msg:has(:focus-visible) .msg-actions { opacity: 1; }
 @media (hover: none) { .msg-actions { opacity: 1; } }
 .act { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 8px; border-radius: 6px; font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
 .act:hover, .act.on { background: var(--hover); color: var(--ink); }
 .act.narrow { padding: 0 4px; }
 .split { display: inline-flex; align-items: center; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.msg.user .chips { justify-content: flex-end; }
+.msg.user .chips, .msg.user .msg-actions { justify-content: flex-end; }
 .chip {
   display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 10px; border-radius: 99px; border: 1px solid var(--line);
   font-size: 12.5px; color: var(--ink-2); background: var(--raised); max-width: 100%;
@@ -287,11 +287,10 @@ button.chip:hover { border-color: var(--line-2); background: var(--hover); }
     .msg { position: relative; }
     .msg-actions { position: absolute; top: 100%; left: 0; padding-top: 4px; z-index: 2; flex-wrap: nowrap; pointer-events: none; }
     .msg.user .msg-actions { left: auto; right: 0; }
-    .msg:hover .msg-actions, .msg:focus-within .msg-actions { pointer-events: auto; }
+    .msg:hover .msg-actions, .msg:has(:focus-visible) .msg-actions { pointer-events: auto; }
     .inserter { height: 40px; margin-bottom: 0; }
   }
 }
-@media (hover: none) { .inserter-btn { opacity: 1; } }
 .inserter-btn {
   display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--ink-3); background: var(--bg); border: 1px solid var(--line-2);
   border-radius: 99px; padding: 0 9px; height: 20px; opacity: 0; transition: opacity 0.15s var(--ease); position: relative; z-index: 1;
@@ -299,6 +298,8 @@ button.chip:hover { border-color: var(--line-2); background: var(--hover); }
 .inserter::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed var(--line-2); opacity: 0; transition: opacity 0.15s var(--ease); }
 .inserter:hover .inserter-btn, .inserter:hover::before, .inserter-btn:focus-visible { opacity: 1; }
 .inserter-btn:hover { color: var(--ink); }
+/* Touch screens cannot hover, so the insert button is always shown there. */
+@media (hover: none) { .inserter-btn { opacity: 1; } }
 .edit-box { display: grid; gap: 8px; width: 100%; }
 .edit-area { min-height: 72px; overflow-y: auto; }
 .system-prompt { display: grid; gap: 6px; margin-bottom: 18px; }
