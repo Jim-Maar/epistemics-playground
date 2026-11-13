@@ -1,8 +1,9 @@
-# Builds the web app and publishes it to GitHub Pages on every push to main.
+# Builds the web app and publishes it to GitHub Pages.
+# Switched off on 2026-11-13: the app runs only on localhost for now, so this no longer starts
+# on a push. To put the site back online, add the push trigger again (branches: [main]), turn
+# GitHub Pages on for the repository, and open the /playground/ route in the devbox Caddyfile.
 name: Deploy web app
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,6 +26,8 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run check
       - run: bun run build
+        env:
+          VITE_BASE: /epistemics-playground/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/dist
