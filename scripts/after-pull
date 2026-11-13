@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# pull-main-checkouts runs this after it fast-forwarded the main checkout: after-pull <old commit>.
+# It applies new migrations and restarts the API server when server code changed.
+set -euo pipefail
+old_head="${1:?usage: after-pull <old commit>}"
+cd "$(dirname "$0")/.."
+if git diff --quiet "$old_head" HEAD -- server shared migrations deploy package.json bun.lock; then
+  exit 0
+fi
+bun run scripts/migrate.ts
+if ! git diff --quiet "$old_head" HEAD -- deploy/epistemics-playground.service; then
+  cp deploy/epistemics-playground.service "$HOME/.config/systemd/user/"
+  systemctl --user daemon-reload
+fi
+systemctl --user restart --no-block epistemics-playground
