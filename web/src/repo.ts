@@ -335,6 +335,19 @@ export function setMessageDeleted(id: string, deleted: boolean) {
   return update<MessageRec>("messages", id, { deleted: deleted ? 1 : 0 });
 }
 
+async function removeScoresOf(sampleIds: string[]) {
+  for (const score of live(await db.scores.where("targetId").anyOf(sampleIds).toArray())) {
+    await save<ScoreRec>("scores", { ...score, deleted: 1, removedWithSample: true });
+  }
+}
+
+async function bringBackScoresOf(sampleIds: string[]) {
+  const scores = await db.scores.where("targetId").anyOf(sampleIds).toArray();
+  for (const score of scores.filter((s) => s.removedWithSample)) {
+    await save<ScoreRec>("scores", { ...score, deleted: 0, removedWithSample: false });
+  }
+}
+
 /** Replaces the given samples of a message with fresh queued ones. Returns the new samples. */
 export function replaceSamples(messageId: string, oldIds: string[], count: number): Promise<SampleRec[]> {
   return tx(async () => {
@@ -343,6 +356,7 @@ export function replaceSamples(messageId: string, oldIds: string[], count: numbe
     const existing = await messageSamples(messageId);
     const replaced = existing.filter((s) => oldIds.includes(s.id));
     for (const sample of replaced) await save("samples", { ...sample, deleted: 1 });
+    await removeScoresOf(replaced.map((s) => s.id));
     const kept = existing.filter((s) => !oldIds.includes(s.id));
     const usedIndexes = new Set(kept.map((s) => s.index));
     const freeIndexes = replaced.map((s) => s.index);
@@ -368,6 +382,8 @@ export function restoreSamples(restoreIds: string[], removeIds: string[]) {
   return tx(async () => {
     for (const id of restoreIds) await patch<SampleRec>("samples", id, { deleted: 0 });
     for (const id of removeIds) await patch<SampleRec>("samples", id, { deleted: 1 });
+    await bringBackScoresOf(restoreIds);
+    await removeScoresOf(removeIds);
   });
 }
 
