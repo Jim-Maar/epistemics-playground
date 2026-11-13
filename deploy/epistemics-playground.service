@@ -1,0 +1,16 @@
+# systemd user service for the API server. Install with scripts/install-service.
+[Unit]
+Description=Epistemics Playground API server (model calls, sign-in and sync for the web app)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/dev/repos/personal/epistemics-playground
+# The server starts `claude` from ~/.local/bin and runs under bun, which nvm puts on the PATH.
+ExecStart=/bin/bash -c 'export PATH="$HOME/.local/bin:$PATH"; . "$HOME/.nvm/nvm.sh"; exec bun server/index.ts'
+Restart=always
+RestartSec=2
+# On a restart the server lets running model calls finish for up to two minutes.
+TimeoutStopSec=130
+
+[Install]
+WantedBy=default.target

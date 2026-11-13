@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# One-time setup of the API server on the devbox: links the env file, applies the migrations,
+# and installs and starts the systemd user service.
+set -euo pipefail
+repo="$(cd "$(dirname "$0")/.." && pwd)"
+[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
+ln -sf "$HOME/dev/env/epistemics-playground/env" "$repo/.env"
+(cd "$repo" && bun install --frozen-lockfile && bun run scripts/migrate.ts)
+mkdir -p "$HOME/.config/systemd/user"
+cp "$repo/deploy/epistemics-playground.service" "$HOME/.config/systemd/user/"
+systemctl --user daemon-reload
+systemctl --user enable --now epistemics-playground
+systemctl --user --no-pager status epistemics-playground | head -5

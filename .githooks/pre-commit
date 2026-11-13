@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Runs the type check and the unit tests before every commit.
+set -euo pipefail
+[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
+bun run check
