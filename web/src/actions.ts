@@ -242,7 +242,8 @@ export async function rerunJudge(attachment: AttachmentRec) {
 }
 
 export async function saveJudge(judge: JudgeRec, changes: Pick<JudgeRec, "name" | "prompt" | "seesContext" | "lowerIsBetter">) {
-  const changesScores = changes.prompt !== judge.prompt || changes.seesContext !== judge.seesContext;
+  // Writing the first prompt of a new judge is not a new revision: nothing was scored without it.
+  const changesScores = Boolean(judge.prompt) && (changes.prompt !== judge.prompt || changes.seesContext !== judge.seesContext);
   await update<JudgeRec>("judges", judge.id, { ...changes, revision: judge.revision + (changesScores ? 1 : 0) });
 }
 

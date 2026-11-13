@@ -20,7 +20,7 @@ function Home({ tree, leading }: { tree: Tree | undefined; leading: React.ReactN
   const empty = tree !== undefined && tree.byId.size === 0;
   return (
     <section className="pane">
-      <header className="pane-head">{leading}</header>
+      <header className="pane-head bare">{leading}</header>
       <div className="empty">
         <h2>{empty ? "Welcome to the playground" : "Pick a thread"}</h2>
         <p>Probe how Opus 5.5 handles evidence, uncertainty and pressure. Edit any message, sample up to five answers at once, and let judges score them.</p>

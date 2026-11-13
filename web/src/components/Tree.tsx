@@ -11,6 +11,7 @@ import {
   useSensor,
   useSensors,
   type DragMoveEvent,
+  type Modifier,
 } from "@dnd-kit/core";
 import { ChevronDown, ChevronRight, Columns2, Copy, Folder, FolderInput, FolderPlus, Link2, MessageSquare, MoreHorizontal, Pencil, SquarePen, Trash2 } from "lucide-react";
 import { deleteNode, duplicate, newFolder, newThread, openSideBySide, renamingStore, routeFor } from "../actions";
@@ -29,6 +30,24 @@ const LONG_PRESS_MS = 250;
 const LONG_PRESS_TOLERANCE_PX = 8;
 const ROOT_END_ID = "root-end";
 const INDENT_PX = 16;
+const DRAG_CHIP_OFFSET = { x: 14, y: 12 };
+
+function pointerStart(event: Event): { x: number; y: number } {
+  const touch = "touches" in event ? (event as TouchEvent).touches[0] : undefined;
+  const point = touch ?? (event as globalThis.MouseEvent);
+  return { x: point.clientX, y: point.clientY };
+}
+
+/** Puts the drag chip right below the pointer instead of on top of the row being targeted. */
+const besidePointer: Modifier = ({ activatorEvent, draggingNodeRect, transform }) => {
+  if (!activatorEvent || !draggingNodeRect) return transform;
+  const start = pointerStart(activatorEvent);
+  return {
+    ...transform,
+    x: transform.x + start.x - draggingNodeRect.left + DRAG_CHIP_OFFSET.x,
+    y: transform.y + start.y - draggingNodeRect.top + DRAG_CHIP_OFFSET.y,
+  };
+};
 
 type Zone = "before" | "after" | "into";
 type DropTarget = { id: string; zone: Zone } | null;
@@ -264,9 +283,7 @@ export function TreeView(props: { tree: Tree; route: Route; runningThreadIds: Se
     if (!over || !dragged) return setTarget(null);
     if (over.id === ROOT_END_ID) return setTarget({ id: ROOT_END_ID, zone: "after" });
     const overNode = tree.byId.get(String(over.id));
-    const start = event.activatorEvent as globalThis.MouseEvent | TouchEvent;
-    const startY = "touches" in start ? (start.touches[0]?.clientY ?? 0) : start.clientY;
-    const relativeY = (startY + event.delta.y - over.rect.top) / over.rect.height;
+    const relativeY = (pointerStart(event.activatorEvent).y + event.delta.y - over.rect.top) / over.rect.height;
     const zone = overNode ? zoneFor(tree, dragged, overNode, relativeY) : null;
     setTarget(zone && overNode ? { id: overNode.id, zone } : null);
   };
@@ -302,7 +319,7 @@ export function TreeView(props: { tree: Tree; route: Route; runningThreadIds: Se
         ))}
         <RootEnd active={target?.id === ROOT_END_ID} />
       </div>
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={null} modifiers={[besidePointer]}>
         {dragged && (
           <div className="drag-chip">
             {dragged.kind === "folder" ? <Folder size={14} /> : dragged.kind === "view" ? <Columns2 size={14} /> : <MessageSquare size={14} />}

@@ -28,13 +28,22 @@ export function PopoverHost() {
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
 
+  // The content of a popover can load after it opens, so its place is worked out again
+  // every time its size changes.
   useLayoutEffect(() => {
-    if (!state || !ref.current) return setPosition(null);
-    const { width, height } = ref.current.getBoundingClientRect();
-    const fitsBelow = state.anchor.bottom + POPOVER_GAP + height <= window.innerHeight - VIEWPORT_MARGIN;
-    const top = fitsBelow ? state.anchor.bottom + POPOVER_GAP : Math.max(VIEWPORT_MARGIN, state.anchor.top - POPOVER_GAP - height);
-    const left = Math.max(VIEWPORT_MARGIN, Math.min(state.anchor.left, window.innerWidth - width - VIEWPORT_MARGIN));
-    setPosition({ left, top });
+    const element = ref.current;
+    if (!state || !element) return setPosition(null);
+    const place = () => {
+      const { width, height } = element.getBoundingClientRect();
+      const fitsBelow = state.anchor.bottom + POPOVER_GAP + height <= window.innerHeight - VIEWPORT_MARGIN;
+      const top = fitsBelow ? state.anchor.bottom + POPOVER_GAP : Math.max(VIEWPORT_MARGIN, state.anchor.top - POPOVER_GAP - height);
+      const left = Math.max(VIEWPORT_MARGIN, Math.min(state.anchor.left, window.innerWidth - width - VIEWPORT_MARGIN));
+      setPosition({ left, top });
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(element);
+    return () => observer.disconnect();
   }, [state]);
 
   useEffect(() => {

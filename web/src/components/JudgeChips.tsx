@@ -121,9 +121,18 @@ function JudgePicker({ message, attachedJudgeIds }: { message: MessageRec; attac
   );
 }
 
+function attachmentsOf(data: ThreadData, message: MessageRec): AttachmentRec[] {
+  return data.attachments.filter((a) => a.messageId === message.id && data.judges.has(a.judgeId));
+}
+
+export function openJudgePicker(event: MouseEvent, data: ThreadData, message: MessageRec) {
+  openPopover(event.currentTarget, <JudgePicker message={message} attachedJudgeIds={attachmentsOf(data, message).map((a) => a.judgeId)} />);
+}
+
+/** The scores under a message. A message without judges shows no row; its "Judge" button is in the action row. */
 export function JudgeChips({ data, message, readOnly }: { data: ThreadData; message: MessageRec; readOnly?: boolean }) {
-  const attachments = data.attachments.filter((a) => a.messageId === message.id && data.judges.has(a.judgeId));
-  if (readOnly && attachments.length === 0) return null;
+  const attachments = attachmentsOf(data, message);
+  if (attachments.length === 0) return null;
   const openDetails = (event: MouseEvent, attachment: AttachmentRec) => {
     if (readOnly) return;
     openPopover(event.currentTarget, <ScoreDetails threadId={data.thread.id} attachmentId={attachment.id} />);
@@ -149,12 +158,7 @@ export function JudgeChips({ data, message, readOnly }: { data: ThreadData; mess
         );
       })}
       {!readOnly && (
-        <button
-          className="chip add"
-          onClick={(event) =>
-            openPopover(event.currentTarget, <JudgePicker message={message} attachedJudgeIds={attachments.map((a) => a.judgeId)} />)
-          }
-        >
+        <button className="chip add" onClick={(event) => openJudgePicker(event, data, message)}>
           <Plus size={13} />
           Judge
         </button>
