@@ -1,8 +1,11 @@
 /** Talks to the API server on the devbox. */
 import { useSyncExternalStore } from "react";
 
-export const API_URL: string =
-  import.meta.env.VITE_API_URL ?? (location.hostname === "localhost" ? "http://localhost:8095" : "https://159-195-131-30.sslip.io/playground");
+const PUBLIC_API_URL = "https://159-195-131-30.sslip.io/playground";
+const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+
+/** Opened from localhost, the app reaches the API through the dev server's /api path. */
+export const API_URL: string = import.meta.env.VITE_API_URL ?? (isLocal ? "/api" : PUBLIC_API_URL);
 
 const TOKEN_KEY = "playground.token";
 const BROWSER_ID_KEY = "playground.browserId";
