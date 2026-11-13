@@ -2,7 +2,7 @@
 import { Fragment, memo, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ChevronDown, Columns2, Copy, Pencil, Plus, RotateCw, Sparkles, Trash2 } from "lucide-react";
+import { ChevronDown, Columns2, Copy, Pencil, Plus, RotateCw, Scale, Sparkles, Trash2 } from "lucide-react";
 import { MAX_SAMPLES } from "../../../shared/types";
 import {
   addSample,
@@ -23,7 +23,7 @@ import { update } from "../repo";
 import { startRun, useLiveRun } from "../runs";
 import { scoreColor, summarize } from "../scores";
 import { toast, useStore } from "../stores";
-import { JudgeChips } from "./JudgeChips";
+import { JudgeChips, openJudgePicker } from "./JudgeChips";
 import { AutoTextarea, copyText, openMenu } from "./ui";
 
 const EDIT_BOX_MAX_HEIGHT = 420;
@@ -71,6 +71,13 @@ function EditBox(props: {
   );
 }
 
+/** The "Judge" button of a message that has no judges yet. With judges, the chip row has its own. */
+function JudgeAction({ data, message }: { data: ThreadData; message: MessageRec }) {
+  const hasJudges = data.attachments.some((a) => a.messageId === message.id && data.judges.has(a.judgeId));
+  if (hasJudges) return null;
+  return <button className="act" onClick={(event) => openJudgePicker(event, data, message)}><Scale size={13} />Judge</button>;
+}
+
 // ---------- User message ----------
 
 function UserMessage({ data, message, next, readOnly }: { data: ThreadData; message: MessageRec; next?: MessageRec; readOnly?: boolean }) {
@@ -104,6 +111,7 @@ function UserMessage({ data, message, next, readOnly }: { data: ThreadData; mess
           )}
           <button className="act" onClick={() => editingStore.set(message.id)}><Pencil size={13} />Edit</button>
           <button className="act" onClick={() => void copyWithToast(message.text)}><Copy size={13} />Copy</button>
+          <JudgeAction data={data} message={message} />
           <button className="act" onClick={() => void deleteMessage(message)}><Trash2 size={13} />Delete</button>
         </div>
       )}
@@ -259,6 +267,7 @@ function AssistantMessage(props: { data: ThreadData; message: MessageRec; readOn
           </span>
           <button className="act" onClick={() => editingStore.set(message.id)}><Pencil size={13} />Edit</button>
           <button className="act" onClick={() => void copyWithToast(active.text)}><Copy size={13} />Copy</button>
+          <JudgeAction data={data} message={message} />
           <button className="act" onClick={() => void deleteMessage(message)}><Trash2 size={13} />Delete</button>
         </div>
       )}

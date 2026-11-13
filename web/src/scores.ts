@@ -40,7 +40,9 @@ export function summarize(
     average: values.length ? values.reduce((sum, s) => sum + s.value!, 0) / values.length : null,
     doneCount: values.length,
     targetCount: targets.length,
-    pending: targets.some((t) => t.score?.status === "queued" || t.score?.status === "running"),
+    pending:
+      samples.some((s) => s.status === "queued" || s.status === "running") ||
+      targets.some((t) => t.score?.status === "queued" || t.score?.status === "running"),
     outOfDate: targets.some((t) => t.outOfDate),
     failed: targets.some((t) => t.score?.status === "error"),
     targets,

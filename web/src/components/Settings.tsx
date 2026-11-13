@@ -21,6 +21,8 @@ function ago(time: number | null): string {
   return hours < 48 ? `synced ${hours} h ago` : `synced ${Math.round(hours / 24)} days ago`;
 }
 
+const threadCountLabel = (count: number) => `${count} ${count === 1 ? "thread" : "threads"}`;
+
 function ofKind<T>(entities: Entity[], kind: string): T[] {
   return entities.filter((e) => e.kind === kind).map((e) => e.data as T);
 }
@@ -54,7 +56,7 @@ export async function copyFromBrowser(browser: BrowserInfo) {
       false,
     ),
   );
-  toast(`Copied ${browser.threadCount} threads from ${browser.name}.`);
+  toast(`Copied ${threadCountLabel(browser.threadCount)} from ${browser.name}.`);
 }
 
 function BackendChoice() {
@@ -139,7 +141,7 @@ export function OtherBrowsers() {
     <>
       {others.map((browser) => (
         <div key={browser.id} className="list-row">
-          <span className="grow"><b>{browser.name}</b><span className="muted"> · {browser.threadCount} threads · {ago(browser.lastSyncAt)}</span></span>
+          <span className="grow"><b>{browser.name}</b><span className="muted"> · {threadCountLabel(browser.threadCount)} · {ago(browser.lastSyncAt)}</span></span>
           <button className="btn" disabled={copying !== null} onClick={() => void copy(browser)}>
             {copying === browser.id ? "Copying…" : "Copy threads into this browser"}
           </button>
@@ -193,7 +195,7 @@ function SettingsBody() {
           <button className="btn" onClick={() => void exportAll()}>Export all as JSON</button>
           <button className="btn" onClick={() => void signOut(false)}>Sign out</button>
           <button className="btn" onClick={() => void signOutEverywhere()}>Sign out everywhere</button>
-          <button className="btn ghost danger" onClick={() => void signOut(true)}>Sign out and erase this browser's data</button>
+          <button className="btn danger" onClick={() => void signOut(true)}>Sign out and erase this browser's data</button>
         </div>
       </section>
     </div>

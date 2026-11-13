@@ -14,29 +14,30 @@ import type { ReactNode } from "react";
 
 const PROMPT_MAX_HEIGHT = 420;
 
-type Usage = { attachmentId: string; threadId: string; threadTitle: string; average: number | null; outOfDate: boolean };
+type Usage = { threadId: string; threadTitle: string; messages: number; average: number | null; outOfDate: number };
 
 function useJudgeUsage(judge: JudgeRec | undefined): Usage[] {
   return (
     useLiveQuery(async () => {
       if (!judge) return [];
       const attachments = live(await db.attachments.where("judgeId").equals(judge.id).toArray());
-      const usage: Usage[] = [];
+      const byThread = new Map<string, Usage & { values: number[] }>();
       for (const attachment of attachments) {
         const message = await db.messages.get(attachment.messageId);
         const thread = await db.nodes.get(attachment.threadId);
         if (!message || message.deleted || !thread || thread.deleted) continue;
         const scores = live(await db.scores.where("attachmentId").equals(attachment.id).toArray()).filter((s) => s.status === "done");
         const current = scores.filter((s) => s.judgeRevision === judge.revision && s.value !== undefined);
-        usage.push({
-          attachmentId: attachment.id,
-          threadId: thread.id,
-          threadTitle: thread.title,
-          average: current.length ? current.reduce((sum, s) => sum + s.value!, 0) / current.length : null,
-          outOfDate: current.length === 0 && scores.length > 0,
-        });
+        const usage = byThread.get(thread.id) ?? { threadId: thread.id, threadTitle: thread.title, messages: 0, average: null, outOfDate: 0, values: [] };
+        usage.messages += 1;
+        usage.values.push(...current.map((s) => s.value!));
+        if (current.length === 0 && scores.length > 0) usage.outOfDate += 1;
+        byThread.set(thread.id, usage);
       }
-      return usage;
+      return [...byThread.values()].map(({ values, ...usage }) => ({
+        ...usage,
+        average: values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : null,
+      }));
     }, [judge?.id, judge?.revision]) ?? []
   );
 }
@@ -74,7 +75,7 @@ function TryIt({ judge }: { judge: JudgeRec }) {
 }
 
 function AttachedTo({ judge, usage }: { judge: JudgeRec; usage: Usage[] }) {
-  const outOfDate = usage.filter((u) => u.outOfDate).length;
+  const outOfDate = usage.reduce((sum, u) => sum + u.outOfDate, 0);
   return (
     <div className="field">
       <label>Attached to</label>
@@ -86,8 +87,9 @@ function AttachedTo({ judge, usage }: { judge: JudgeRec; usage: Usage[] }) {
         </p>
       )}
       {usage.map((item) => (
-        <button key={item.attachmentId} className="list-row link-row" onClick={() => navigate({ page: "thread", id: item.threadId })}>
+        <button key={item.threadId} className="list-row link-row" onClick={() => navigate({ page: "thread", id: item.threadId })}>
           <span className="grow row-name">{item.threadTitle}</span>
+          {item.messages > 1 && <span className="muted small">{item.messages} messages</span>}
           <b className={item.outOfDate ? "muted" : ""}>{item.average !== null ? formatScore(item.average) : item.outOfDate ? "out of date" : "…"}</b>
         </button>
       ))}
